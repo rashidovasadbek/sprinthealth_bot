@@ -498,6 +498,40 @@ async def list_brons(manager_tg_id: int | None = None, limit: int = 20):
         return await conn.fetch(BRON_SELECT + " ORDER BY b.id DESC LIMIT $1", limit)
 
 
+async def list_pending_brons(company_id: int):
+    """Hali oplataga yuborilmagan (status='new') bronlar — tarkibi bilan.
+
+    Markirovka sahifasi uchun: bitta so'rovda bron + dorilar (json_agg),
+    eskisi birinchi — navbat tartibida.
+    """
+    async with get_pool().acquire() as conn:
+        return await conn.fetch(
+            """SELECT b.id, b.doc_contract_no, b.total_sum, b.created_at,
+                      p.name AS pharmacy_name, p.inn, p.phone AS pharmacy_phone,
+                      r.name AS region_name, u.full_name AS manager_name,
+                      COALESCE((
+                          SELECT json_agg(json_build_object(
+                                     'line_no', i.line_no,
+                                     'drug_id', i.drug_id,
+                                     'name', i.drug_name,
+                                     'unit', i.unit,
+                                     'quantity', i.quantity,
+                                     'box_capacity', d.box_capacity
+                                 ) ORDER BY i.line_no)
+                          FROM bron_item i
+                          LEFT JOIN drug d ON d.id = i.drug_id
+                          WHERE i.bron_id = b.id
+                      ), '[]'::json) AS items
+               FROM bron b
+               JOIN pharmacy p ON b.pharmacy_id = p.id
+               JOIN region r ON p.region_id = r.id
+               LEFT JOIN app_user u ON u.telegram_id = b.manager_tg_id
+               WHERE b.company_id = $1 AND b.status = 'new'
+               ORDER BY b.created_at""",
+            company_id,
+        )
+
+
 # ============================================================
 #  STATISTIKA
 # ============================================================

@@ -23,6 +23,7 @@ from handlers import admin, bron, common, groups, pharmacy_admin, stats
 from middlewares.auth import AuthMiddleware
 from middlewares.context import CompanyMiddleware
 from services import company as company_service
+from web import server as web_server
 
 logger = logging.getLogger(__name__)
 
@@ -103,12 +104,15 @@ async def main() -> None:
     )
 
     await setup_commands(bot)
+    web_runner = await web_server.start(settings)
     me = await bot.get_me()
     logger.info("Bot ishga tushdi... 🚀  @%s", me.username)
 
     try:
         await dp.start_polling(bot)
     finally:
+        if web_runner:
+            await web_runner.cleanup()
         await close_pool()
         await bot.session.close()
         logger.info("Bot to'xtatildi.")

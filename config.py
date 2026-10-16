@@ -60,6 +60,10 @@ class Settings:
     log_level: str
     company_code: str
 
+    # Markirovka sahifasi (web). web_port bo'sh bo'lsa web o'chiq.
+    web_port: int | None = None
+    web_token: str = ""
+
     @property
     def db_config(self) -> dict:
         return {
@@ -91,7 +95,17 @@ def load_settings() -> Settings:
         db_port=int(os.getenv("DB_PORT", "5432").strip() or "5432"),
         log_level=os.getenv("LOG_LEVEL", "INFO").strip().upper() or "INFO",
         company_code=os.getenv("COMPANY_CODE", "sprinthealth").strip() or "sprinthealth",
+        web_port=_opt_int("WEB_PORT"),
+        web_token=_web_token(),
     )
+
+
+def _web_token() -> str:
+    """WEB_PORT berilgan bo'lsa token majburiy — sahifa ochiq IP'da turadi."""
+    token = os.getenv("WEB_TOKEN", "").strip()
+    if os.getenv("WEB_PORT", "").strip() and len(token) < 16:
+        raise ConfigError("WEB_PORT berilgan — WEB_TOKEN kamida 16 belgi bo'lishi kerak")
+    return token
 
 
 def load_db_settings() -> Settings:

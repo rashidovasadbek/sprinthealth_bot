@@ -60,6 +60,7 @@ Adminlar `.env` da emas, **bazada** (`app_user.role`). Admin qo'shish uchun kod 
 | `services/pricing.py` | Pul hisobi — **yagona manba** |
 | `services/render.py` | Xabar matnlari + 4096 belgi chegarasi (`chunks()`) |
 | `services/excel.py` | Excel → `bytes` (diskka yozilmaydi) |
+| `web/` | Markirovka sahifasi — oplataga yuborilmagan bronlar (faqat o'qiydi) |
 
 ### Rollar
 
@@ -89,6 +90,31 @@ Raqamning o'zida `N` bor, shuning uchun xabarlarda «№» takrorlanmaydi —
 4. umumiy jami = yaxlitlangan qator jamilar yig'indisi
 
 Bron yaratilganda narx, NDS va qator jami `bron_item` ga **snapshot** qilinadi — dori keyin qimmatlashsa ham eski hujjat o'zgarmaydi. Oplata guruhiga yuborishda summalar qayta hisoblanmaydi (`pricing.stored_items`).
+
+## Markirovka sahifasi
+
+Bron guruhidagi **oplataga hali yuborilmagan** (`status='new'`) bronlarni bitta
+sahifada ko'rsatadi — markirovka olishda adashmaslik uchun. Bot bilan bitta
+jarayonda ishlaydi, bazaga hech narsa yozmaydi.
+
+- `.env` ga `WEB_PORT=8090` va `WEB_TOKEN=...` (kamida 16 belgi) qo'shing.
+  `WEB_PORT` bo'sh bo'lsa sahifa o'chiq.
+- Birinchi marta: `http://SERVER_IP:8090/markirovka?token=WEB_TOKEN` — token
+  brauzerda saqlanadi, keyin shunchaki `/markirovka`.
+- Port ochiq bo'lishi kerak: `sudo ufw allow 8090/tcp` (ufw yoqilgan bo'lsa).
+
+Sahifada: bron kartalari (apteka, shartnoma, dorilar, karobka hisobi) va
+«Preparatlar bo'yicha» jami ro'yxat. Har qatorga «markirovkasi olindi»
+belgisi qo'yiladi — bu belgi **faqat shu brauzerda** saqlanadi. Bron
+oplataga yuborilganda sahifadan o'zi yo'qoladi, oldingi yuklashdan keyin
+kelganlari «YANGI» deb belgilanadi.
+
+API boshqa sahifadan ham chaqirilishi mumkin (CORS ochiq):
+
+```js
+fetch("http://SERVER_IP:8090/api/pending", { headers: { "X-Token": TOKEN } })
+  .then(r => r.json())   // { company, generated_at, brons: [{ id, pharmacy_name, inn, doc_contract_no, items: [...] }] }
+```
 
 ## Deploy
 
